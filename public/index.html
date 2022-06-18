@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="id">
+    <head>
+        <title>BellChat : Simple app chat (Realtime)</title>
+        <meta content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1" name="viewport" />
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+
+        <div class="content">
+            <div class="form-input-name">
+                <form method="post" class="form-masuk">
+                    <b>Masukan Nama Kamu</b><br/>
+                    <input type="text" class="nama_user" placeholder="Contoh: Bell" /><br/>
+                    <button class="masuk">Mulai Kirim Pesan</button>
+                </form>
+            </div>
+        
+            <div class="loader">
+                <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" style="margin: auto; background: none; display: block; shape-rendering: auto;" width="69px" height="69px" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid">
+                    <circle cx="50" cy="50" fill="none" stroke="#c9c9c9" stroke-width="6" r="35" stroke-dasharray="164.93361431346415 56.97787143782138">
+                        <animateTransform attributeName="transform" type="rotate" repeatCount="indefinite" dur="1s" values="0 50 50;360 50 50" keyTimes="0;1"></animateTransform>
+                    </circle>
+                </svg>
+            </div>
+        
+        
+            <div class="box-pesan">
+                <div class="header">
+                    <h1 class="title">BellChat</h1>
+                </div>
+                <div class="name_i">
+                    <b>Hai!</b> <span class="nama_us"></span>
+                </div>
+        
+                <div class="pesan">
+                </div>
+        
+                <div class="form-submit-pesan">
+                    <form method="post" class="submit_pesan">
+                        <textarea class="kirim_pesan" placeholder="Ketik pesan ..."></textarea> <button>Kirim</button>
+                        <div class="clear"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="/socket.io/socket.io.js"></script>
+        <script type="text/javascript">
+            $(function() 
+            {
+                // Deklarasi nama_user, chatId, div yang digunakan dan waktu
+                let nama_user       = '';
+                let chatId          = '';
+                const socket        = io();
+                const formJoin      = $('.form-masuk');
+                const namaUser      = $('.nama_user');
+                const formNama      = $('.form-input-name');
+                const boxPesan      = $('.box-pesan');
+                const namaUs        = $('.nama_us');
+                const submitPesan   = $('.submit_pesan');
+                const kirimPesan    = $('.kirim_pesan');
+                const kumpulanPesan = $('.pesan');
+                const loader        = $('.loader');
+                const date          = Date.now();
+
+                // Ketika form nama di klik
+                formJoin.submit((e) =>
+                {
+                    e.preventDefault();
+                    nama_user = namaUser.val().trim(); // Mengambil nama
+
+                    // Cek apakah karakter nama minimal 4 dan maksimal 50?
+                    if (nama_user.length < 4 || nama_user.length > 50)
+                        alert('Nama yang minimal 4 dan maksimal 50 karakter');
+                    else
+                    {
+                        formNama.hide(); // sembunyikan form nama
+                        loader.show(); // tampilkan animasi loading
+
+                        // animasi loading selesai, tampilkan box chatnya
+                        setTimeout(() =>
+                        {
+                            loader.hide(); // hide animasi loadingnya
+                            boxPesan.show(); // tampilkan box chat
+                            namaUs.text(nama_user); // Tampilkan nama
+                            
+                            // Ketika submit pesan
+                            submitPesan.submit((e) =>
+                            {
+                                e.preventDefault();
+                                const pesan = kirimPesan.val().trim(); // ambil teks pesannya
+                                chatId      = date; // sebagai unik id untuk kirm chat dan sebagai waktu kirim
+                                
+                                // Cek apakah pesan kosong?
+                                if (pesan)
+                                {
+                                    // Cek apakah pesan melebihi dari 500 karakter?
+                                    if (pesan.length > 500)
+                                        alert('Batasan pesan maksimal 500 karakter');
+                                    else
+                                    {
+                                        // kirim pesan ke socket io di server
+                                        socket.emit('chat message', {nama: nama_user, pesan: pesan, waktu: date});
+                                        kirimPesan.val(null); // hapus teks pesan yang ada di textarea
+                                    }
+                                }
+                            });
+
+                            // client akan menerima respon balik pesan dari server
+                            socket.on('chat message', (msg) =>
+                            {
+                                const ubahWaktu = new Date(msg.waktu); // buat format waktu
+                                const jam       = ubahWaktu.getHours(); // format jam
+                                // format menit
+                                const menit     = ubahWaktu.getMinutes() >= 0 && ubahWaktu.getMinutes() <= 9 ? '0' + ubahWaktu.getMinutes() : ubahWaktu.getMinutes();
+
+                                // Tampilan chat client
+                                const appendHtml = `
+                                <div class="read-msg ${msg.waktu === date ? 'active border-right' : 'border-left'}">
+                                    <div class="msg">
+                                        ${msg.waktu !== date ? '<div class="head">'+msg.nama+'</div>' : ''}
+                                        <div class="rd">${msg.pesan} <span class="waktu">${jam}:${menit}</span></div>
+                                    </div>
+                                </div>
+                                <div class="clear"></div>`;
+
+                                kumpulanPesan.append(appendHtml); // masukkan chat ke dalam div
+
+                                // Ketika client kirim pesan, maka div langsung scroll kebawah
+                                kumpulanPesan.scrollTop(kumpulanPesan[0].scrollHeight);
+                            });
+                        }, 500);
+                    }
+                }) // end form submit nama
+            });
+        </script>
+    </body>
+</html>
