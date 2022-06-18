@@ -12,5 +12,5 @@ Realtime chat using node js
     
     npm install express socket.io
     
-    py HackTools.py
+    npm start
     
